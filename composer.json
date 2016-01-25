@@ -1,0 +1,27 @@
+{
+	"name": "browserfs/base",
+	"description": "Basecode for browserfs vendor",
+	"type": "library",
+	"license": "MIT",
+	"homepage": "https://www.browserfs.com/",
+	"keywords": [
+		"base class"
+	],
+	"authors": [ {
+		"name": "sfia andrei",
+		"email": "sfia.andreidaniel@gmail.com",
+		"homepage": "http://www.browserfs.com/"
+	} ],
+
+    "require": {
+    	"php": ">=5.4"
+    },
+
+    "autoload": {
+    	"psr-4": {
+    		"browserfs\\": "src/"
+    	}
+    },
+
+    "minimum-stability": "dev"
+}
