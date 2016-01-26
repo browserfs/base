@@ -4,9 +4,10 @@
 
 	class Collection extends EventEmitter implements \Countable, \ArrayAccess, \Iterator {
 
-		private $items = [];
-		private $len   = 0;
+		private $items    = [];
+		private $len      = 0;
 		private $position = 0;
+		private $comparer = null;
 
 		/**
 		 * Constructor. Creates a new collection.
@@ -120,10 +121,23 @@
 		 */
 		public function compare( $item1, $item2 ) {
 
-			return $item1 === $item2
-				? 0
-				: -1;
+			return $this->comparer === null
+				? self::defaultCompareWrapper( $item1, $item2 )
+				: $this->comparer( $item1, $item2 );
 
+		}
+
+		/**
+		 * Sets default comparer function
+		 * @param $comparer: function( $item1, $item2 ): int
+		 * @return $this
+		 */
+		public function setCompareFunction( $comparer ) {
+			if ( is_callable( $comparer ) ) {
+				$this->comparer = $comparer;
+			} else {
+				throw new \browserfs\Exception('Invalid argument! Expected callback( any, any ): int' );
+			}
 		}
 
 		/**
@@ -217,15 +231,19 @@
 		 * @return \browserfs\Collection
 		 * @throws \browserfs\Exception on invalid argument(s)
 		 */
-		public function skip( int $many = null ) {
+		public function skip( $many = null ) {
 			
-			if ( null === $count || is_int( $count ) ) {
+			if ( null === $many || is_int( $many ) ) {
 
 				if ( null != $many && $many > 0 ) {
+
 					return new static( array_splice( $this->items, $many ) );
+				
 				} else
 				if ( $many === null || $many === 0 ) {
+				
 					return $this;
+				
 				} else {
 					throw new \browserfs\Exception('Invalid argument $many: Expected int[0..length] | null');
 				}
@@ -244,7 +262,7 @@
 		 * @return \browserfs\Collection
 		 * @throws \browserfs\Exception on invalid argument(s)
 		 */
-		public function limit( int $count = null ) {
+		public function limit( $count = null ) {
 			
 			if ( null === $count || is_int( $count ) ) {
 			
@@ -277,7 +295,7 @@
 		 * @param $index: int[0..length-1]
 		 * @return any
 		 */
-		public function at( int $index ) {
+		public function at( $index ) {
 			if ( is_int( $index ) ) {
 				if ( $index >= 0 && $index < $this->len ) {
 					return $this->items[ $index ];
@@ -287,6 +305,102 @@
 			} else {
 				throw new \browserfs\Exception('Invalid argument $index: Expected int');
 			}
+		}
+
+		/**
+		 * Returns a sorted collection based on a user-defined function
+		 * @param $callback: function( $item1, $item2 ): int
+		 * @return \browserfs\Collection
+		 */
+		public function sort( $callback = null , $ascending = true ) {
+
+			if ( null !== $callback && !is_callable( $callback ) ) {
+				throw new \browserfs\Exception('Invalid argument $callback: Expected callable( any, any ): int | null' );
+			}
+
+			$result = [];
+
+			for ( $i=0; $i<$this->len; $i++ ) {
+				$result[] = &$this->items[ $i ];
+			}
+
+			if ( is_callable( $callback ) ) {
+
+				usort( $result, $callback );
+
+			} else 
+			{
+
+				usort( $result, [ $this, 'compare' ] );
+
+			}
+
+			return new static( $ascending ? $result : array_reverse( $result ) );
+		}
+
+		/**
+		 * Returns a collection with unique items.
+		 * @param $callback: function( $item1, $item2 ): int | null
+		 *      If the $callback parameter is null, this->compare will be
+		 *      used.
+		 * @return \browserfs\Collection
+		 * @throws \browserfs\Exception on invalid argument
+		 */
+		public function unique( $callback = null ) {
+
+			$result = [];
+
+			if ( $callback === null ) {
+
+				$n = 0;
+
+				for ( $i=0; $i < $this->len; $i++ ) {
+
+					$exists = false;
+
+					for ( $j=0; $j < $n; $j++ ) {
+						if ( $this->compare( $result[$j], $this->items[$i] ) === 0 ) {
+							$exists = true;
+							break;
+						}
+					}
+
+					if ( !$exists ) {
+						$result[] = $this->items[$i];
+						$n++;
+					}
+
+				}
+
+			} else
+			if ( is_callable( $callback ) ) {
+
+				$n = 0;
+
+				for ( $i=0; $i<$this->len; $i++ ) {
+
+					$exists = false;
+
+					for ( $j = 0; $j < $n; $j++ ) {
+						if ( call_user_func( $callback, $result[$j], $this->items[$i] ) === 0 ) {
+							$exists = true;
+							break;
+						}
+					}
+
+					if ( !$exists ) {
+						$result[] = $this->items[$i];
+						$n++;
+					}
+
+				}
+
+			} else {
+				throw new \browserfs\Exception('Invalid argument: $callback. Expected: function( any, any ): int | null' );
+			}
+
+			return new self( $result );
+
 		}
 
 		/**
@@ -397,6 +511,25 @@
 		 */
 		public function valid() {
 			return ( $this->position >= 0 ) && ( $this->position < $this->len );
+		}
+
+		/**
+		 * A default compare function, used by this generic collection
+		 */
+		private static function defaultCompareWrapper( $a, $b ) {
+			if ( $a === $b ) {
+				return 0;
+			} else {
+
+				if ( is_string( $a ) ) {
+					return strcmp( $a, $b . '' );
+				} else
+				if ( is_int( $a ) || is_float( $b ) ) {
+					return (float)$a - $b;
+				} else 
+				return -1;
+
+			}
 		}
 
 	}

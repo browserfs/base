@@ -96,4 +96,71 @@
 
 		}
 
+		public function testSkip() {
+
+			$this->assertEquals( 6, $this->collection->skip(2)->count() );
+
+		}
+
+		public function testLimit() {
+			$this->assertEquals( 2, $this->collection->limit(2)->count() );
+		}
+
+		public function testAt() {
+			$this->assertEquals( 1, $this->collection->at( 0 ) );
+			$this->assertEquals( 2, $this->collection->at( 1 ) );
+		}
+
+		public function testSort() {
+
+			$result = [];
+
+			$this->collection->sort()->each( function( $item ) use ( &$result ) {
+					$result[] = $item;
+				});
+
+			$this->assertEquals( '11223344', implode( '', $result ) );
+
+			$result = [];
+
+			$this->collection->sort( null, false )->each( function( $item ) use ( &$result ) {
+					$result[] = $item;
+				} );
+
+			$this->assertEquals( '44332211', implode( '', $result ) );
+
+			$result = [];
+
+			$this->collection->sort( function( $a, $b ) {
+					return $a - $b;
+				} )->each( function( $item ) use ( &$result ) {
+					$result[] = $item;
+				} );
+
+			$this->assertEquals( '11223344', implode('', $result) );
+
+			$result = [];
+
+			$this->collection->sort( function( $a, $b ) {
+					return $a - $b;
+				}, false )->each( function( $item ) use ( &$result ) {
+					$result[] = $item;
+				} );
+
+			$this->assertEquals( '44332211', implode('', $result) );
+
+		}
+
+		public function testUnique() {
+
+			$result = [];
+			
+			$this->collection->sort()->unique()->each( function( $item ) use ( &$result ) {
+				$result[] = $item;
+			} );
+
+			$this->assertEquals( '1234', implode('', $result ) );
+
+		}
+
 	}
