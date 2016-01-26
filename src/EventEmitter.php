@@ -7,6 +7,12 @@
 		private $events = [];
 		private $fireId = 0;
 
+		/**
+		 * Adds a event listener.
+		 * @param eventName: string
+		 * @param eventCallback: callable( $e: \browserfs\Event ) => void
+		 * @throws \browserfs\Exception
+		 */
 		public final function on( $eventName, $eventCallback ) {
 			
 			if ( !is_string( $eventName ) ) {
@@ -43,6 +49,12 @@
 
 		}
 
+		/**
+		 * Adds a event listener that will be fired only once.
+		 * @param eventName: string
+		 * @param eventCallback: callable( $e: \browserfs\Event ) => void
+		 * @throws \browserfs\Exception
+		 */
 		public final function once( $eventName, $eventCallback ) {
 
 			if ( !is_string( $eventName ) ) {
@@ -75,7 +87,12 @@
 			}
 		}
 
-		private function callbackEquals( $callback1, $callback2 ) {
+		/**
+		 * Helper to compare if two callbacks are equal.
+		 * @param callback1 - callable
+		 * @param callback2 - callable
+		 */
+		private static function callbackEquals( $callback1, $callback2 ) {
 
 			if ( is_array( $callback1 ) && is_array( $callback2 ) ) {
 				
@@ -103,6 +120,13 @@
 
 		}
 
+		/**
+		 * Removes a event listener callback binded to eventName
+		 * @param eventName - string - > the name of the event
+		 * @param eventCallback -> [ callable( $e: \browserfs\Event ): void ] -> a callable function that
+		 *     was previously added with the "on" or "once" methods. If unspecified, all listeners
+		 *     that were added to eventName will be cleared.
+		 */
 		public final function off( $eventName, $eventCallback = null ) {
 
 			if ( is_string( $eventName ) ) {
@@ -119,10 +143,16 @@
 
 							for ( $i = count( $this->events[ $eventName ] ) - 1; $i>=0; $i-- ) {
 
-								if ( $this->callbackEquals( $eventCallback, $this->events[ $eventName ][ $i ]['callback'] ) ) {
+								if ( self::callbackEquals( $eventCallback, $this->events[ $eventName ][ $i ]['callback'] ) ) {
 
 									// remove event
 									array_splice( $this->events[ $eventName ], $i, 1 );
+
+									if ( count( $this->events[ $eventName ] ) == 0 ) {
+										unset( $this->events[ $eventName ] );
+									}
+
+									break;
 
 								}
 
@@ -146,6 +176,13 @@
 
 		}
 
+		/**
+		 * Fires a event, and returns it's generated event object.
+		 * @param $eventName: string   -> the name of the event to be fired
+		 * @param ...$eventArgs: any[] -> event arguments
+		 * @return \browserfs\Event    -> event object
+		 * @throws \Exception
+		 */
 		public final function fire( $eventName /* ... $eventArgs: any[] */ ) {
 
 			if ( !is_string( $eventName ) ) {
@@ -206,8 +243,11 @@
 
 			} catch ( \Exception $e ) {
 				
-				throw $e;
+				throw new \browserfs\Exception( "Error firing event " . $eventName, 0, $e );
+			
 			}
+
+			return $event;
 
 		}
 	}
